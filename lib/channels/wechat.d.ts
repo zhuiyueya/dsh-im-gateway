@@ -18,6 +18,12 @@ export interface WechatChannelConfig {
 }
 /** CDN 基址（官方插件同款）。 */
 export declare const CDN_BASE_URL = "https://novac2c.cdn.weixin.qq.com/c2c";
+/**
+ * 微信客户端渲染已知行为：消息里的单个 `\n` 会被折叠成空格，
+ * 只有空行（`\n\n`）才渲染为换行。发送前把单换行提升为双换行，
+ * 已有空行保持原样（不把 `\n\n` 变成 `\n\n\n\n`）。
+ */
+export declare function normalizeWechatNewlines(text: string): string;
 /** PKCS7 填充后的密文大小。 */
 export declare function aesEcbPaddedSize(plaintextSize: number): number;
 export declare function encryptAesEcb(plaintext: Buffer, key: Buffer): Buffer;

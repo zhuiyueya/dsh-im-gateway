@@ -8,6 +8,7 @@ import {
   parseAesKey,
   buildCdnDownloadUrl,
   mimeFromExt,
+  normalizeWechatNewlines,
 } from '../lib/channels/wechat.js'
 
 test('AES-128-ECB 加解密往返', () => {
@@ -64,4 +65,16 @@ test('CDN aes_key 两种格式都能解密同一密文', () => {
   const k2 = parseAesKey(Buffer.from(rawKey.toString('hex'), 'ascii').toString('base64'))
   assert.deepEqual(decryptAesEcb(ciphertext, k1), plaintext)
   assert.deepEqual(decryptAesEcb(ciphertext, k2), plaintext)
+})
+
+test('normalizeWechatNewlines：单换行提升为双换行，空行保持原样', () => {
+  assert.equal(normalizeWechatNewlines('题目\n1) 快速\n2) 完整'), '题目\n\n1) 快速\n\n2) 完整')
+  // 已有空行不叠加
+  assert.equal(normalizeWechatNewlines('提示\n\n题目\n1) 选项'), '提示\n\n题目\n\n1) 选项')
+  // 无换行不动
+  assert.equal(normalizeWechatNewlines('一行文本'), '一行文本')
+  // 连续多个单换行也各自提升
+  assert.equal(normalizeWechatNewlines('a\nb\nc'), 'a\n\nb\n\nc')
+  // 尾部换行保持
+  assert.equal(normalizeWechatNewlines('a\n'), 'a\n')
 })

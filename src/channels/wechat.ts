@@ -39,6 +39,15 @@ const UPLOAD_IMAGE = 1
 const UPLOAD_VIDEO = 2
 const UPLOAD_FILE = 3
 
+/**
+ * 微信客户端渲染已知行为：消息里的单个 `\n` 会被折叠成空格，
+ * 只有空行（`\n\n`）才渲染为换行。发送前把单换行提升为双换行，
+ * 已有空行保持原样（不把 `\n\n` 变成 `\n\n\n\n`）。
+ */
+export function normalizeWechatNewlines(text: string): string {
+  return text.replace(/([^\n])\n(?!\n|$)/g, '$1\n\n')
+}
+
 interface WechatState {
   allowedUserId?: string
   contextTokens: Record<string, string>
@@ -506,7 +515,10 @@ export function createWechatChannel(config: WechatChannelConfig, log: (line: str
   }
 
   async function sendText(toUserId: string, text: string): Promise<void> {
-    await sendRaw(toUserId, { type: ITEM_TEXT, text_item: { text } }, `dsh-im-gateway:${Date.now()}:${Math.floor(Math.random() * 1e6)}`)
+    // 微信客户端渲染已知行为：单个 \n 折叠成空格，只有空行（\n\n）才显示换行。
+    // 发送前把单换行提升为双换行，保证题目/选项/列表等在微信里正常换行。
+    const normalized = normalizeWechatNewlines(text)
+    await sendRaw(toUserId, { type: ITEM_TEXT, text_item: { text: normalized } }, `dsh-im-gateway:${Date.now()}:${Math.floor(Math.random() * 1e6)}`)
   }
 
   /** typing：getconfig 拿 ticket（按用户缓存），sendtyping 发状态。 */
