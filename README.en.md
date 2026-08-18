@@ -167,7 +167,7 @@ tool approval → approval/request → pushed to chat → 「approve」→ allow
 | **Feishu / Lark** | ✅ Full | Official SDK long-connection | Official QR or App ID + Secret |
 | **DingTalk** | ✅ Full | Official Stream connection | Official QR or Client ID + Secret |
 | **WeCom** | ✅ Full | Official intelligent-bot WebSocket | Official QR or Bot ID + Secret |
-| **WeChat** | ✅ Full* | iLink QR login (official protocol) | Dedicated account ⚠️ |
+| **WeChat** | ✅ Full* | Official iLink long-polling (device QR) | Official iLink account (dedicated account recommended) |
 | **QQ Bot** | ✅ Full | Official WebSocket | Official QR or AppID + Secret |
 | **LINE** | ✅ Full | REST + webhook | Channel token |
 | **Matrix** | ✅ Full | Client sync | Homeserver + token |
@@ -185,7 +185,7 @@ tool approval → approval/request → pushed to chat → 「approve」→ allow
 | **Google Chat** | 🧪 Experimental | webhook | Public endpoint |
 | **Tlon / Yuanbao / Voice** | 🧪 Skeleton | — | Infrastructure |
 
-✅ Full = send & receive work ｜ 🔄 Dynamic dep = prompts to install SDK if missing ｜ 🧪 Experimental = needs public network / dedicated infra ｜ \*WeChat = official iLink protocol (media + voice-to-text + typing)
+✅ Full = send & receive work ｜ 🔄 Dynamic dep = prompts to install SDK if missing ｜ 🧪 Experimental = needs public network / dedicated infra ｜ *WeChat = Tencent's official iLink channel (media + voice-to-text + typing)
 
 ## 🚀 Quick Start
 

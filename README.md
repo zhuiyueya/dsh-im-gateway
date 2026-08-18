@@ -190,7 +190,7 @@ agent 回复 ← 网关(按渠道分片) ← session/event(assistant/message) �
 | **飞书 / Lark** | ✅ 完整 | 官方 SDK 长连接 | 官方扫码或 App ID + Secret |
 | **钉钉** | ✅ 完整 | 官方 Stream 长连接 | 官方扫码或 Client ID + Secret |
 | **企业微信** | ✅ 完整 | 官方智能机器人 WebSocket | 官方扫码或 Bot ID + Secret |
-| **微信** | ✅ 完整* | iLink 扫码登录（官方协议） | 专用小号 ⚠️ |
+| **微信** | ✅ 完整* | 官方 iLink 长轮询（设备扫码） | 官方 iLink 账号（建议专用账号） |
 | **QQ 机器人** | ✅ 完整 | 官方 WebSocket | 官方扫码或 AppID + Secret |
 | **LINE** | ✅ 完整 | REST + webhook | Channel token |
 | **Matrix** | ✅ 完整 | 客户端同步 | Homeserver + token |
@@ -208,7 +208,7 @@ agent 回复 ← 网关(按渠道分片) ← session/event(assistant/message) �
 | **Google Chat** | 🧪 实验性 | webhook | 公网地址 |
 | **Tlon / 元宝 / 语音** | 🧪 骨架 | — | 基础设施 |
 
-✅ 完整 = 收发可用 ｜ 🔄 动态依赖 = 未装 SDK 时提示安装 ｜ 🧪 实验性 = 需公网/专用基础设施 ｜ \*微信 = 官方 iLink 协议（媒体收发 + 语音转文字 + typing）
+✅ 完整 = 收发可用 ｜ 🔄 动态依赖 = 未装 SDK 时提示安装 ｜ 🧪 实验性 = 需公网/专用基础设施 ｜ *微信 = 腾讯官方 iLink 渠道（媒体收发 + 语音转文字 + typing）
 
 ## 🚀 快速开始
 
