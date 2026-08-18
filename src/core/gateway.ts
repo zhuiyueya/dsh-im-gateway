@@ -50,6 +50,8 @@ const HELP_TEXT = [
   '/bind <session-id> — 绑定本机 live 会话（bound 模式）',
   '/unbind — 解绑（bound 模式）',
   '/channels — 各渠道连接状态',
+  '/cron list — 查看本聊天定时任务',
+  '/cron rm <id> — 删除定时任务（im_cron 工具创建）',
   '批准 / 拒绝 — 应答待批准的请求',
   '编号 / 选项文字 — 回答待处理的 ask_user_question（多选用逗号）',
   '普通文本直接发给 agent；结尾 .. 表示还有后续，!! 表示立即提交',
@@ -123,6 +125,8 @@ export class ImGateway {
   private unauthorizedHandler: ((channelId: string, msg: ImMessage) => string) | undefined
   /** UI 批准的渠道白名单（manager 同步），重启后由 manager 重新灌入。 */
   private readonly extraAllowlist = new Map<string, Set<string>>()
+  /** im_cron 注册表（index.ts 接线后注入；工具经它读写定时任务）。 */
+  private cron: import('./cron.js').CronRegistry | undefined
 
   constructor(ctx: Context, options: GatewayOptions) {
     this.ctx = ctx
@@ -196,6 +200,171 @@ export class ImGateway {
 
   listChannels(): ChannelAdapter[] {
     return [...this.channels.values()]
+  }
+
+  /** 注入 im_cron 注册表（index.ts 构造后接线用）。 */
+  setCronRegistry(registry: import('./cron.js').CronRegistry): void {
+    this.cron = registry
+    this.registerCronTools()
+  }
+
+  /** 注册 im_cron 工具：agent 在聊天里一句话创建/查看/删除聊天级定时任务。 */
+  private registerCronTools(): void {
+    const tools = this.ctx.tools
+    if (!tools) return
+    try {
+      const disposer = tools.register({
+        name: 'im_cron_add',
+        description:
+          '创建聊天级定时提醒：到点直接推送到当前 IM 聊天，与会话轮换（/new）无关。' +
+          '用户说「提醒我…/定时…/几点叫我/多少分钟后叫我」时优先使用本工具；' +
+          '不要使用 schedule_create——它绑定会话，/new 轮换后提醒会丢失，而本工具绑定聊天不受影响。' +
+          'at 为一次性提醒（ISO 8601 带时区偏移，或本地时刻配合 tz）；time 为每天/每周周期提醒；二者选一。' +
+          'remind 模式到点直推文案；task 模式（一次性 agent 执行）暂未实现。',
+        parameters: {
+          type: 'object',
+          properties: {
+            prompt: { type: 'string', description: '提醒文案（如：该去拿证件了）' },
+            at: { type: 'string', description: '一次性提醒时刻：ISO 8601 带时区偏移（如 2026-09-18T09:00:00+08:00），或本地时刻（如 2026-09-18T09:00:00）配合 tz；与 time 二选一' },
+            time: { type: 'string', description: '周期提醒：本地时刻 HH:MM（24 小时制），如 09:00；与 at 二选一' },
+            days: { type: 'array', items: { type: 'number' }, description: '星期 1=周一…7=周日；省略=每天' },
+            tz: { type: 'string', description: 'IANA 时区（如 Asia/Hong_Kong）；省略=进程默认' },
+            mode: { type: 'string', enum: ['remind', 'task'], description: 'remind=到点直推（默认）；task=一次性 agent 执行（未实现）' },
+            workspace: { type: 'string', description: 'task 模式的工作目录（可选）' },
+          },
+          required: ['prompt'],
+        },
+        output: {
+          schema: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              detail: { type: 'string' },
+            },
+            required: ['ok', 'detail'],
+          },
+          render: (args, value) => [{ type: 'text', text: JSON.stringify(value) }],
+        },
+        execute: async (args, exec) => {
+          const sessionId = exec.agent?.session?.id
+          return this.cronAddFromSession(sessionId ? String(sessionId) : undefined, args as Record<string, unknown>)
+        },
+      })
+      this.disposeTools.push(disposer)
+
+      const disposerList = tools.register({
+        name: 'im_cron_list',
+        description: '列出当前 IM 聊天已创建的定时任务（id / 时刻 / 星期 / 文案 / 下次触发）。',
+        parameters: { type: 'object', properties: {} },
+        output: {
+          schema: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              detail: { type: 'string' },
+            },
+            required: ['ok', 'detail'],
+          },
+          render: (args, value) => [{ type: 'text', text: JSON.stringify(value) }],
+        },
+        execute: async (args, exec) => {
+          const sessionId = exec.agent?.session?.id
+          return this.cronListFromSession(sessionId ? String(sessionId) : undefined)
+        },
+      })
+      this.disposeTools.push(disposerList)
+
+      const disposerRm = tools.register({
+        name: 'im_cron_rm',
+        description: '删除当前 IM 聊天的一个定时任务（仅限本聊天创建的任务）。',
+        parameters: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: '任务 id（im_cron_list 返回）' },
+          },
+          required: ['id'],
+        },
+        output: {
+          schema: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              detail: { type: 'string' },
+            },
+            required: ['ok', 'detail'],
+          },
+          render: (args, value) => [{ type: 'text', text: JSON.stringify(value) }],
+        },
+        execute: async (args, exec) => {
+          const sessionId = exec.agent?.session?.id
+          return this.cronRemoveFromSession(sessionId ? String(sessionId) : undefined, String((args as { id?: unknown }).id ?? ''))
+        },
+      })
+      this.disposeTools.push(disposerRm)
+    } catch (err) {
+      this.logLine(`[gateway] im_cron 工具注册失败: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  /** 当前会话所在 chat（首个绑定 chat；无则 undefined）。 */
+  private chatOfSession(sessionId: string | undefined): ChatEntry | undefined {
+    if (!sessionId) return undefined
+    return this.router.chatsForSession(sessionId)[0]
+  }
+
+  /** im_cron_add 执行体（可测试）：任务绑定当前 chat，防越权。 */
+  async cronAddFromSession(sessionId: string | undefined, input: Record<string, unknown>): Promise<{ ok: boolean; detail: string }> {
+    const registry = this.cron
+    if (!registry) return { ok: false, detail: 'im_cron 服务未就绪' }
+    const chat = this.chatOfSession(sessionId)
+    if (!chat) return { ok: false, detail: '当前会话没有关联的 IM 聊天（仅 IM 发起的会话可用此工具）' }
+    const days = Array.isArray(input.days) ? (input.days as unknown[]).map(Number) : []
+    const at = typeof input.at === 'string' && input.at !== '' ? input.at : undefined
+    const time = typeof input.time === 'string' && input.time !== '' ? input.time : undefined
+    const result = registry.addTask({
+      channelId: chat.channelId,
+      chatId: chat.chatId,
+      ...(at !== undefined ? { at } : { time: time ?? '' }),
+      days,
+      ...(typeof input.tz === 'string' && input.tz !== '' ? { tz: input.tz } : {}),
+      mode: input.mode === 'task' ? 'task' : 'remind',
+      prompt: String(input.prompt ?? ''),
+      ...(typeof input.workspace === 'string' && input.workspace !== '' ? { workspace: input.workspace } : {}),
+    })
+    if (!result.ok) return { ok: false, detail: result.error }
+    const next = new Date(result.task.nextRunAt).toISOString()
+    return { ok: true, detail: `已创建定时提醒 ${result.task.id}：${result.task.time}，下次触发 ${next}` }
+  }
+
+  /** im_cron_list 执行体：仅返回当前 chat 的任务。 */
+  async cronListFromSession(sessionId: string | undefined): Promise<{ ok: boolean; detail: string }> {
+    const registry = this.cron
+    if (!registry) return { ok: false, detail: 'im_cron 服务未就绪' }
+    const chat = this.chatOfSession(sessionId)
+    if (!chat) return { ok: false, detail: '当前会话没有关联的 IM 聊天' }
+    const tasks = registry.list().filter((t) => t.channelId === chat.channelId && t.chatId === chat.chatId)
+    if (tasks.length === 0) return { ok: true, detail: '本聊天还没有定时任务。例：创建「每天 09:00 提醒我喝水」' }
+    const rows = tasks.map((t) => {
+      const when = `${t.time}${t.days.length ? ' 周' + t.days.join('、') : ' 每天'}`
+      const next = new Date(t.nextRunAt).toISOString()
+      return `[${t.id}] ${when} · ${t.prompt.slice(0, 40)}${t.enabled ? '' : '（已停用）'} · 下次 ${next}`
+    })
+    return { ok: true, detail: rows.join('\n') }
+  }
+
+  /** im_cron_rm 执行体：仅允许删除当前 chat 的任务。 */
+  async cronRemoveFromSession(sessionId: string | undefined, id: string): Promise<{ ok: boolean; detail: string }> {
+    const registry = this.cron
+    if (!registry) return { ok: false, detail: 'im_cron 服务未就绪' }
+    const chat = this.chatOfSession(sessionId)
+    if (!chat) return { ok: false, detail: '当前会话没有关联的 IM 聊天' }
+    const task = registry.list().find((t) => t.id === id)
+    if (!task) return { ok: false, detail: `任务不存在：${id}` }
+    if (task.channelId !== chat.channelId || task.chatId !== chat.chatId) {
+      return { ok: false, detail: '只能删除本聊天创建的任务' }
+    }
+    registry.remove(id)
+    return { ok: true, detail: `已删除任务 ${id}` }
   }
 
   /** 设置未授权回调（manager 构造后接线用）。 */
@@ -595,6 +764,14 @@ export class ImGateway {
           lines.push(`• ${ch.label} (${ch.id}) — ${status || '运行中'}`)
         }
         return lines.join('\n')
+      }
+      case '/cron': {
+        const sub = args[0]?.toLowerCase()
+        if (sub === 'rm' && args[1]) {
+          return (await this.cronRemoveFromSession(this.router.get(channelId, chatId)?.sessionId, args[1])).detail
+        }
+        if (sub && sub !== 'list') return '用法：/cron list 或 /cron rm <id>'
+        return (await this.cronListFromSession(this.router.get(channelId, chatId)?.sessionId)).detail
       }
       default:
         return `未知命令 ${cmd}。发送 /help 查看可用命令。`

@@ -12,6 +12,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ChannelAdapter, ImGatewayConfig } from './core/types.js'
 import { ImGateway } from './core/gateway.js'
+import type { CronRegistry } from './core/cron.js'
 import { CHANNEL_IDS, CHANNEL_META, createChannel, type ChannelMeta } from './channels/index.js'
 
 /** 前端展示用的渠道视图。 */
@@ -44,12 +45,15 @@ export interface ManagerOptions {
   stateDir: string
   log: (line: string) => void
   gateway: ImGateway
+  /** im_cron 注册表（/api/cron 管理端点用）。 */
+  cron: CronRegistry
 }
 
 export class ChannelManager {
   private readonly ctx: Context
   private readonly options: ManagerOptions
   private readonly stateFile: string
+  private readonly cron: CronRegistry
   private store: Record<string, Record<string, unknown>>
   /** 渠道级白名单（UI 批准的用户）：channelId → userId[]。 */
   private allowlist: Record<string, string[]>
@@ -63,6 +67,7 @@ export class ChannelManager {
   constructor(ctx: Context, options: ManagerOptions) {
     this.ctx = ctx
     this.options = options
+    this.cron = options.cron
     this.stateFile = join(options.stateDir, 'channels.json')
     const loaded = this.load()
     this.store = loaded.channels
@@ -312,6 +317,28 @@ export class ChannelManager {
         // /dsh-im-gateway/api/channels
         if (parts[2] === 'channels' && parts.length === 3 && req.method === 'GET') {
           send(res, 200, { ok: true, channels: this.list(), pending: this.pendingRequests() })
+          return
+        }
+        // /dsh-im-gateway/api/cron
+        if (parts[2] === 'cron' && parts.length === 3 && req.method === 'GET') {
+          send(res, 200, { ok: true, tasks: this.cron.list() })
+          return
+        }
+        if (parts[2] === 'cron' && parts.length === 4 && req.method === 'POST') {
+          const id = parts[3]
+          const body = await readBody(req)
+          if (id === 'delete') {
+            const removed = this.cron.remove(String(body.id ?? ''))
+            send(res, removed ? 200 : 404, { ok: removed, ...(removed ? {} : { error: `任务不存在：${String(body.id ?? '')}` }) })
+            return
+          }
+          if (id === 'enable') {
+            const enabled = body.enabled !== false
+            const done = this.cron.setEnabled(String(body.id ?? ''), enabled)
+            send(res, done ? 200 : 404, { ok: done, ...(done ? { enabled } : { error: `任务不存在：${String(body.id ?? '')}` }) })
+            return
+          }
+          send(res, 404, { ok: false, error: `unknown cron action ${id}` })
           return
         }
         // /dsh-im-gateway/api/channels/<id>/connect|disconnect|refresh

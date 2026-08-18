@@ -9,6 +9,7 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { ImGatewayConfig } from './core/types.js';
 import { ImGateway } from './core/gateway.js';
+import type { CronRegistry } from './core/cron.js';
 import { type ChannelMeta } from './channels/index.js';
 /** 前端展示用的渠道视图。 */
 export interface ChannelView {
@@ -39,11 +40,14 @@ export interface ManagerOptions {
     stateDir: string;
     log: (line: string) => void;
     gateway: ImGateway;
+    /** im_cron 注册表（/api/cron 管理端点用）。 */
+    cron: CronRegistry;
 }
 export declare class ChannelManager {
     private readonly ctx;
     private readonly options;
     private readonly stateFile;
+    private readonly cron;
     private store;
     /** 渠道级白名单（UI 批准的用户）：channelId → userId[]。 */
     private allowlist;

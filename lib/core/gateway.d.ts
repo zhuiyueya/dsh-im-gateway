@@ -68,11 +68,34 @@ export declare class ImGateway {
     private unauthorizedHandler;
     /** UI 批准的渠道白名单（manager 同步），重启后由 manager 重新灌入。 */
     private readonly extraAllowlist;
+    /** im_cron 注册表（index.ts 接线后注入；工具经它读写定时任务）。 */
+    private cron;
     constructor(ctx: Context, options: GatewayOptions);
     register(channel: ChannelAdapter): void;
     unregister(channelId: string): void;
     channel(channelId: string): ChannelAdapter | undefined;
     listChannels(): ChannelAdapter[];
+    /** 注入 im_cron 注册表（index.ts 构造后接线用）。 */
+    setCronRegistry(registry: import('./cron.js').CronRegistry): void;
+    /** 注册 im_cron 工具：agent 在聊天里一句话创建/查看/删除聊天级定时任务。 */
+    private registerCronTools;
+    /** 当前会话所在 chat（首个绑定 chat；无则 undefined）。 */
+    private chatOfSession;
+    /** im_cron_add 执行体（可测试）：任务绑定当前 chat，防越权。 */
+    cronAddFromSession(sessionId: string | undefined, input: Record<string, unknown>): Promise<{
+        ok: boolean;
+        detail: string;
+    }>;
+    /** im_cron_list 执行体：仅返回当前 chat 的任务。 */
+    cronListFromSession(sessionId: string | undefined): Promise<{
+        ok: boolean;
+        detail: string;
+    }>;
+    /** im_cron_rm 执行体：仅允许删除当前 chat 的任务。 */
+    cronRemoveFromSession(sessionId: string | undefined, id: string): Promise<{
+        ok: boolean;
+        detail: string;
+    }>;
     /** 设置未授权回调（manager 构造后接线用）。 */
     setUnauthorizedHandler(handler: (channelId: string, msg: ImMessage) => string): void;
     /** 添加 UI 批准的渠道白名单用户（manager 同步调用；重启后重新灌入）。 */

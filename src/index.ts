@@ -30,6 +30,7 @@ declare module '@deepseek-ai/dsh-jobs' {
 }
 import { ImGateway } from './core/gateway.js'
 import type { ImGatewayConfig } from './core/types.js'
+import { CronRegistry } from './core/cron.js'
 import { ChannelManager } from './manager.js'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -59,6 +60,10 @@ export const Config: Schema<ImGatewayConfig> = Schema.object({
   approvalTimeoutSecs: Schema.number().default(120),
   questionTimeoutSecs: Schema.number().default(600),
   summaryOnTurnEnd: Schema.boolean().default(true),
+  // im_cron：聊天级定时任务（绑定 chatId，与会话轮换无关）
+  cronTickIntervalSecs: Schema.number().default(30),
+  cronMaxConcurrent: Schema.number().default(2),
+  cronCatchUp: Schema.boolean().default(false),
   stateDir: Schema.string().default(''),
 })
 
@@ -180,12 +185,43 @@ export function apply(ctx: Context, config: ImGatewayConfig): void {
   }
 
   const gateway = new ImGateway(ctx, { config, stateDir, log, workspaceStore, titleStore, activityStore, chatSessionStore })
-  const manager = new ChannelManager(ctx, { config, stateDir, log, gateway })
+
+  // im_cron：聊天级定时任务（绑定 chatId，与会话轮换无关）
+  const cron = new CronRegistry({
+    stateDir,
+    log,
+    catchUp: config.cronCatchUp,
+    send: async (channelId, chatId, text) => {
+      const channel = gateway.channel(channelId)
+      if (!channel) return false
+      try {
+        await channel.send(chatId, text)
+        return true
+      } catch (err) {
+        log(`[cron] ${channelId} 发送失败: ${err instanceof Error ? err.message : String(err)}`)
+        return false
+      }
+    },
+  })
+  gateway.setCronRegistry(cron)
+  const manager = new ChannelManager(ctx, { config, stateDir, log, gateway, cron })
   // 未授权用户 → 登记待授权请求（设置面板可一键批准，无需手动找用户 ID）
   gateway.setUnauthorizedHandler((channelId, msg) => {
     manager.requestAuthorization(channelId, msg.userId ?? '(匿名)', msg.username, msg.chatId)
     return '⛔ 未授权：请让管理员在 dsh 设置 → IM 网关 中批准你的访问请求。'
   })
+
+  // im_cron tick：独立 effect，热重载时定时器随 effect 清理，不会残留双 tick
+  ctx.effect(() => {
+    const timer = setInterval(() => {
+      void cron.tick()
+    }, Math.max(1, config.cronTickIntervalSecs) * 1000)
+    timer.unref?.()
+    return () => {
+      clearInterval(timer)
+      cron.dispose()
+    }
+  }, 'im-gateway.cron')
 
   ctx.effect(() => {
     // 启动已启用渠道（channels.json / cordis 配置）

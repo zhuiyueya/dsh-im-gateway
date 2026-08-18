@@ -179,11 +179,45 @@ export interface ImGatewayConfig {
     questionTimeoutSecs: number;
     /** 每轮结束是否推送摘要。 */
     summaryOnTurnEnd: boolean;
+    /** im_cron 定时器 tick 间隔（秒）。 */
+    cronTickIntervalSecs: number;
+    /** im_cron 同时执行的 task 任务数上限（remind 不受限）。 */
+    cronMaxConcurrent: number;
+    /** 网关错过触发时刻后是否补跑最近一次（默认 false：跳过）。 */
+    cronCatchUp: boolean;
     /** 状态/登录文件的落盘目录（默认 $DSH_HOME/dsh-im-gateway）。 */
     stateDir: string;
 }
 /** 渠道通用配置（每个渠道在 enabled 时才会被启动）。 */
 export interface ChannelConfig {
     enabled?: boolean;
+}
+/** 聊天级定时任务（im_cron）：绑定 chatId 而非 sessionId，与会话轮换无关。 */
+export interface CronTask {
+    /** 稳定 id，永不复用。 */
+    id: string;
+    channelId: string;
+    chatId: string;
+    /** 本地时刻 "HH:MM"。 */
+    time: string;
+    /** 星期 1=周一 … 7=周日；空数组=每天。 */
+    days: number[];
+    /** IANA 时区；缺省用进程默认时区。 */
+    tz?: string;
+    /** remind=到点直推文案；task=一次性 agent 会话执行（预留）。 */
+    mode: 'remind' | 'task';
+    /** remind 模式的提醒文案 / task 模式的任务描述。 */
+    prompt: string;
+    /** task 模式的工作目录（缺省用 chat 偏好/全局 cwd）。 */
+    workspace?: string;
+    enabled: boolean;
+    /** 预计算的下一触发时刻（UTC epoch ms）。 */
+    nextRunAt: number;
+    /** 一次性提醒（at 创建）：触发成功后任务即被移除。 */
+    oneShot?: boolean;
+    lastRunAt?: number;
+    /** 运行中标志（防重入）。 */
+    running?: boolean;
+    createdAt: number;
 }
 //# sourceMappingURL=types.d.ts.map

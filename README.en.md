@@ -83,6 +83,8 @@ Messages starting with `/` in any connected chat are commands:
 | `/bind <session-id>` | Bind a local live session (bound mode) |
 | `/unbind` | Unbind (bound mode) |
 | `/channels` | Connection status of each channel |
+| `/cron list` | List scheduled tasks of this chat |
+| `/cron rm <id>` | Delete a scheduled task (created via `im_cron` tools) |
 | `approve` / `reject` | Answer a pending approval (also `yes` / `no` / `同意`) |
 | Plain text | Sent to the agent; trailing `..` means "more coming", `!!` submits immediately |
 
@@ -94,6 +96,7 @@ Messages starting with `/` in any connected chat are commands:
 - 🔁 **One agent session per chat** — chatting in a group drives the agent, replies stream back in real time; `/new` starts a fresh session, `/bind` attaches an existing one
 - ✅ **Remote approval bridge** — when the agent requests a tool approval it's pushed to the chat; reply 「approve / reject」 right there, and it falls back to the local approval system on timeout
 - ❓ **Interactive Question Bridge** — `ask_user_question` prompts and options fan out to every bound channel; answer from Web or any IM, and the first valid answer resumes the same agent
+- ⏰ **Chat-scoped scheduled reminders (im_cron)** — scheduled tasks bind to the chat, not the session, so `/new` rotation or session restarts never break them; say "remind me to drink water at 9am daily" right in the chat to create one, and it fires straight into the chat
 - 📱 **Mobile multi-part input merge** — `..` means "more coming", `!!` submits immediately, bare text merges within a 5s window, auto-recovers after a crash
 - ✂️ **Smart splitting of long replies** — chunks by each channel's limit, breaks at newlines/periods first, numbered `(i/n)` and convergent
 - 🛡️ **Allowlist-safe by default** — unknown users are rejected by default; approval replies are strictly checked against session ownership
