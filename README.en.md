@@ -1,7 +1,7 @@
 # 🐋 dsh-im-gateway
 
 <h3 align="center">Connect DeepSeek Harness to every chat app you use</h3>
-<p align="center">Aggregated IM gateway for <b>DeepSeek Harness (dsh)</b> — drive your coding agents from <b>WeChat, Feishu, Telegram, Discord, QQ</b> and 20+ chat platforms, with unified sessions, remote approvals, interactive questions and one-command setup.</p>
+<p align="center">Aggregated IM gateway for <b>DeepSeek Harness (dsh)</b> — drive your coding agents from <b>WeChat, Feishu, Telegram, Discord, QQ</b> and 25+ chat platforms, with unified sessions, remote approvals, interactive questions and one-command setup.</p>
 
 <p align="center">
   <img alt="npm version" src="https://img.shields.io/npm/v/dsh-im-gateway?color=4d6bfe">
@@ -37,7 +37,7 @@
 > Pick any option below and paste the whole prompt into your dsh (Web GUI chat box / `dsh --profile headless "…"` / any connected IM chat) — the agent will **download, build and install automatically**. No manual commands needed.
 
 <details open>
-<summary><b>Option A · Install from npm (recommended, published to the npm registry)</b></summary>
+<summary><b>Option A · Install from npm (recommended, available on the npm registry)</b></summary>
 
 ```text
 Please install the dsh-im-gateway plugin: dsh plugin --profile web add dsh-im-gateway
@@ -77,7 +77,7 @@ Please install the local dsh-im-gateway project as a dsh plugin:
 ```
 </details>
 
-After install: **open the dsh Web GUI → Settings ⚙️ → 🐋 IM Gateway → click a channel to connect** (WeChat/WhatsApp scan-to-login, everything else just paste credentials).
+After install: **open the dsh Web GUI → Settings ⚙️ → 🐋 IM Gateway → click a channel to connect** (WeChat/WhatsApp link a device; Feishu/QQ/DingTalk/WeCom support official bot provisioning by QR; other channels use guided credentials or infrastructure setup).
 
 ---
 
@@ -113,11 +113,11 @@ Messages starting with `/` in any connected chat are commands:
 - ⏰ **Chat-scoped scheduled reminders (im_cron)** — scheduled tasks bind to the chat, not the session, so `/new` rotation or session restarts never break them; say "remind me to drink water at 9am daily" right in the chat to create one, and it fires straight into the chat
 - 📱 **Mobile multi-part input merge** — `..` means "more coming", `!!` submits immediately, bare text merges within a 5s window, auto-recovers after a crash
 - ✂️ **Smart splitting of long replies** — chunks by each channel's limit, breaks at newlines/periods first, numbered `(i/n)` and convergent
-- 🛡️ **Allowlist-safe by default** — unknown users are rejected by default; approval replies are strictly checked against session ownership
+- 🛡️ **Optional allowlist mode** — `allowAllUsers: true` is the default for easy setup; set it to `false` and configure an allowlist when access control is needed. Approval replies always verify session ownership
 - 🔑 **Six QR access flows** — WeChat / WhatsApp link a device; Feishu / QQ / DingTalk / WeCom use official scan-to-create-bot flows, automatically save credentials, and still offer manual setup
 - 🖼️ **Media in and out** — WeChat fully supports images/voice (server-side transcription)/files/video (CDN AES-128-ECB encrypted); agents can send workspace files into chats via the `im_send_file` tool
 - 📦 **One-command install + visual setup** — a standard `dsh.bundle` plugin; connect channels from the Web GUI settings panel by scanning or pasting credentials, no restart needed
-- 🎯 **Beginner friendly** — WeChat/WhatsApp pop a QR code with one click; other channels use guided forms with live status
+- 🎯 **Beginner friendly** — WeChat/WhatsApp/Feishu/QQ/DingTalk/WeCom pop a QR code from settings; other channels provide guided credential or infrastructure setup with live status
 
 ### ❓ Answering interactive questions
 
@@ -211,7 +211,7 @@ Open the dsh Web GUI (default http://localhost:3080) → **Settings ⚙️ → �
 - **Feishu / QQ / DingTalk / WeCom**: click 「Scan to connect bot」→ scan with the platform app; the bot is created and connected automatically, or use manual credentials ✅
 - **Telegram / Discord / Slack and others**: these platforms have no official QR bot-creation flow; use the guided token or manifest setup ✅
 
-No restart needed after connecting; status updates live (waiting for scan / connected / error). **All configured channels auto-reconnect after a dsh restart** (WeChat login state is persisted, no rescanning). See [`docs/qr-login-matrix.md`](docs/qr-login-matrix.md) for the platform-by-platform QR capability research.
+No restart needed after connecting; status updates live (connecting / connected / not connected / error). **All configured channels auto-reconnect after a dsh restart** (WeChat login state is persisted, no rescanning). See [`docs/qr-login-matrix.md`](docs/qr-login-matrix.md) for the platform-by-platform QR capability research.
 
 > 🔧 **Disconnect vs Delete config**: connected channel cards have two buttons — 「Disconnect」 just pauses it temporarily (auto-restored on restart); 「Delete config」 removes the credentials (won't reconnect until reconfigured).
 
@@ -226,7 +226,7 @@ Message your bot in any connected chat app:
 Hi, take a look at my current workspace    ← plain chat = drive the agent
 ```
 
-> 🔔 **First use requires authorization** (secure default): your first message gets an "unauthorized" reply, while a **「Users requesting access」** banner appears at the top of the IM Gateway settings panel — click 「Allow」 and you're in, no need to hunt for user IDs.
+> 🔔 **Optional first-use authorization**: when `allowAllUsers: false`, the first message from an unknown user gets an "unauthorized" reply and the **「Users requesting access」** banner appears in the IM Gateway settings panel; click 「Allow」 to approve them. With the default `allowAllUsers: true`, this step is not needed.
 
 Agent replies stream back in real time; when approval is needed, reply 「approve / reject」 in the chat; the agent can also use `im_send_file` to send files (screenshots/reports) straight into the chat.
 
@@ -311,7 +311,7 @@ export function createYourChannel(config, log): ChannelAdapter | undefined {
 ## 🤝 Contributing
 
 - Bug fixes, new channels and doc improvements are all welcome!
-- Please make sure `npm test` passes all 60 cases first
+- Please make sure `npm test` passes all 105 cases first
 - Add the `dsh-plugin` and `deepseek-harness` topics to the repo to get into the awesome-plugin list
 
 ## 📄 License

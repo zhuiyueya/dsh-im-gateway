@@ -1,7 +1,7 @@
 # 🐋 dsh-im-gateway
 
 <h3 align="center">把 DeepSeek Harness 接入你常用的每一个聊天软件</h3>
-<p align="center">Aggregated IM gateway for <b>DeepSeek Harness (dsh)</b> — drive your coding agents from <b>WeChat, Feishu, Telegram, Discord, QQ</b> and 20+ chat platforms, with unified sessions, remote approvals, interactive questions and one-command setup.</p>
+<p align="center">Aggregated IM gateway for <b>DeepSeek Harness (dsh)</b> — drive your coding agents from <b>WeChat, Feishu, Telegram, Discord, QQ</b> and 25+ chat platforms, with unified sessions, remote approvals, interactive questions and one-command setup.</p>
 
 <p align="center">
   <img alt="npm version" src="https://img.shields.io/npm/v/dsh-im-gateway?color=4d6bfe">
@@ -37,7 +37,7 @@
 > 任选一种方式，把下面整段提示词发给你的 dsh（Web GUI 聊天框 / `dsh --profile headless "…"` / 已接入的 IM 聊天），agent 会**自动完成下载、构建、安装**——不用手动敲命令。
 
 <details open>
-<summary><b>方式 A · npm 一键安装（推荐，已发布到 npm registry）</b></summary>
+<summary><b>方式 A · npm 一键安装（推荐，npm registry 可用）</b></summary>
 
 ```text
 请安装 dsh-im-gateway 插件：dsh plugin --profile web add dsh-im-gateway
@@ -77,7 +77,7 @@
 ```
 </details>
 
-装好后：**打开 dsh Web GUI → 设置 ⚙️ → 🐋 IM 网关 → 点选渠道连接**（微信/WhatsApp 是设备扫码；飞书/QQ/钉钉/企业微信支持官方扫码创建机器人，其余填凭据即可）。
+装好后：**打开 dsh Web GUI → 设置 ⚙️ → 🐋 IM 网关 → 点选渠道连接**（微信/WhatsApp 关联设备；飞书/QQ/钉钉/企业微信支持官方扫码创建机器人；其他渠道按引导填写凭据或配置基础设施）。
 
 ---
 
@@ -113,11 +113,11 @@
 - ⏰ **聊天级定时提醒（im_cron）** — 定时任务绑定聊天而非会话，`/new` 轮换、会话重启都不影响；在聊天里直接说「每天 9 点提醒我喝水」即可创建，到点直推
 - 📱 **手机多段输入合并** — `..` 表示还有后续，`!!` 立即提交，裸文本 5 秒合并窗口，崩溃后自动恢复
 - ✂️ **长回复智能分片** — 按各渠道上限切分，优先在换行/句号断行，带 `（i/n）` 序号且收敛
-- 🛡️ **白名单安全默认** — 默认拒绝一切未知用户；审批应答强制校验会话归属
+- 🛡️ **白名单可选安全模式** — 默认 `allowAllUsers: true` 便于开箱使用；需要管控时设为 `false` 并配置白名单，审批应答始终校验会话归属
 - 🔑 **六类扫码接入** — 微信 / WhatsApp 扫码关联设备；飞书 / QQ / 钉钉 / 企业微信走平台官方扫码创建机器人，自动保存凭据并连接；仍保留手动凭据入口
 - 🖼️ **媒体收发** — 微信渠道完整支持图片/语音（服务端转文字）/文件/视频（CDN AES-128-ECB 加密），agent 可用 `im_send_file` 工具把工作区文件发给聊天
 - 📦 **一条命令安装 + 可视化连接** — 标准 `dsh.bundle` 插件；Web GUI 设置面板点选渠道、扫码/填凭据即连，无需重启
-- 🎯 **小白友好** — 微信/WhatsApp/飞书/QQ/钉钉/企业微信都可从设置页扫码，其他渠道提供凭据表单，状态实时显示
+- 🎯 **小白友好** — 微信/WhatsApp/飞书/QQ/钉钉/企业微信都可从设置页扫码，其他渠道按渠道提供凭据表单或基础设施配置提示，状态实时显示
 
 ### ❓ 如何回答交互式提问
 
@@ -234,7 +234,7 @@ dsh web    # 重启 dsh（安装插件后需要重启一次）
 - **飞书 / QQ / 钉钉 / 企业微信**：点「扫码接入机器人」→ 使用对应平台 App 扫码确认，自动创建机器人并连接；也可点「手动填写凭据」✅
 - **Telegram / Discord / Slack 等**：这些平台没有官方扫码创建机器人流程，按引导填写 Token 或 Manifest ✅
 
-连接后无需重启，状态实时显示（等待扫码 / 已连接 / 异常）。**重启 dsh 后所有已配置渠道自动重连**（微信登录态已持久化，无需重复扫码）。各平台为什么支持/不支持扫码，见 [`docs/qr-login-matrix.md`](docs/qr-login-matrix.md)。
+连接后无需重启，状态实时显示（连接中 / 已连接 / 未连接 / 异常）。**重启 dsh 后所有已配置渠道自动重连**（微信登录态已持久化，无需重复扫码）。各平台为什么支持/不支持扫码，见 [`docs/qr-login-matrix.md`](docs/qr-login-matrix.md)。
 
 > 🔧 **断开 vs 删除配置**：已连接渠道卡片上有两个按钮——「断开」只是临时停用（重启自动恢复）；「删除配置」会移除凭据（重启不再连接，需重新配置）。
 
@@ -249,7 +249,7 @@ dsh web    # 重启 dsh（安装插件后需要重启一次）
 你好，帮我看看当前工作区    ← 直接聊天 = 驱动 agent
 ```
 
-> 🔔 **首次使用需要授权**（安全默认）：第一次发消息会收到"未授权"提示，同时 dsh 设置 → IM 网关 面板顶部出现 **「有用户请求访问」** 横幅——点「允许」后即可正常使用，无需手动找用户 ID。
+> 🔔 **可选的首次授权**：当 `allowAllUsers: false` 时，第一次发消息会收到"未授权"提示，同时 dsh 设置 → IM 网关 面板顶部出现 **「有用户请求访问」** 横幅——点「允许」后即可正常使用；默认 `allowAllUsers: true` 时无需这一步。
 
 agent 回复实时回推；需要批准时在聊天里回「批准 / 拒绝」；agent 还可以用 `im_send_file` 把文件（截图/报告）直接发到聊天。
 
@@ -334,7 +334,7 @@ export function createYourChannel(config, log): ChannelAdapter | undefined {
 ## 🤝 贡献
 
 - 修 bug、补渠道、完善文档都欢迎！
-- 请先 `npm test` 保证 60 个用例全绿
+- 请先 `npm test` 保证 105 个用例全绿
 - 给仓库加 `dsh-plugin` 和 `deepseek-harness` topic 可以进 awesome 插件列表
 
 ## 📄 许可证
