@@ -11,7 +11,7 @@ import { createFeishuChannel } from './feishu.js';
 import { createWechatChannel } from './wechat.js';
 export type ChannelLog = (line: string) => void;
 /** 渠道 id 列表（展示顺序即推荐顺序）。 */
-export declare const CHANNEL_IDS: readonly ["wechat", "feishu", "telegram", "qqbot", "discord", "slack", "whatsapp", "signal", "msteams", "line", "matrix", "mattermost", "googlechat", "irc", "twitch", "nostr", "nextcloud", "synology", "zalo", "imessage", "tlon", "yuanbao", "voice"];
+export declare const CHANNEL_IDS: readonly ["wechat", "feishu", "dingtalk", "wecom", "qqbot", "telegram", "discord", "slack", "whatsapp", "signal", "msteams", "line", "matrix", "mattermost", "googlechat", "irc", "twitch", "nostr", "nextcloud", "synology", "zalo", "imessage", "tlon", "yuanbao", "voice"];
 export type ChannelId = (typeof CHANNEL_IDS)[number];
 /** 渠道展示元数据（UI 面板用）。 */
 export interface ChannelField {
@@ -23,8 +23,10 @@ export interface ChannelField {
 export interface ChannelMeta {
     label: string;
     emoji: string;
-    /** 图标 favicon 域名（前端经 icons.duckduckgo.com/ip3/<domain>.ico 加载）。 */
-    iconDomain?: string;
+    /** 本地品牌图标文件名（assets/icons/<icon>，前端经 /dsh-im-gateway/api/icon/<id> 加载）；缺省回退 emoji。 */
+    icon?: string;
+    /** 是否有官方扫码创建/绑定机器人流程。 */
+    qrProvisioning?: boolean;
     /** 凭据获取/官方文档地址（前端显示为链接）。 */
     docs?: string;
     /** 连接所需的最小配置字段（UI 表单提示）。 */

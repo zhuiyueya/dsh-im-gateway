@@ -94,6 +94,14 @@ export interface ImGatewayConfig {
             appId?: string;
             appSecret?: string;
         };
+        dingtalk?: ChannelConfig & {
+            clientId?: string;
+            clientSecret?: string;
+        };
+        wecom?: ChannelConfig & {
+            botId?: string;
+            secret?: string;
+        };
         wechat?: ChannelConfig;
         qqbot?: ChannelConfig & {
             appId?: string;

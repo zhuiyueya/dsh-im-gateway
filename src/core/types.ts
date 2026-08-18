@@ -90,6 +90,8 @@ export interface ImGatewayConfig {
     discord?: ChannelConfig & { token?: string }
     slack?: ChannelConfig & { token?: string; appToken?: string }
     feishu?: ChannelConfig & { appId?: string; appSecret?: string }
+    dingtalk?: ChannelConfig & { clientId?: string; clientSecret?: string }
+    wecom?: ChannelConfig & { botId?: string; secret?: string }
     wechat?: ChannelConfig
     qqbot?: ChannelConfig & { appId?: string; appSecret?: string }
     whatsapp?: ChannelConfig

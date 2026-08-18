@@ -11,12 +11,21 @@ import type { ImGatewayConfig } from './core/types.js';
 import { ImGateway } from './core/gateway.js';
 import type { CronRegistry } from './core/cron.js';
 import { type ChannelMeta } from './channels/index.js';
+/** 设置页统一展示的渠道状态；底层协议细节只保留在 adapter 日志中。 */
+export type ChannelDisplayStatus = '已连接' | '未连接' | '连接中' | '异常';
+export declare function normalizeChannelStatus(input: {
+    running: boolean;
+    rawStatus?: string;
+    loginUrl?: string;
+    provisioningStatus?: string;
+}): ChannelDisplayStatus;
 /** 前端展示用的渠道视图。 */
 export interface ChannelView {
     id: string;
     label: string;
     emoji: string;
-    iconDomain?: string;
+    /** 本地图标文件名（assets/icons/），前端经 /dsh-im-gateway/api/icon/<id> 加载；缺省回退 emoji。 */
+    icon?: string;
     docs?: string;
     kind: ChannelMeta['kind'];
     needs: string[];
@@ -26,10 +35,20 @@ export interface ChannelView {
     enabled: boolean;
     /** 是否正在运行（adapter 已启动）。 */
     running: boolean;
-    /** 运行状态文本（如"等待扫码"、"已登录"）。 */
-    status: string;
-    /** 登录二维码 URL（扫码类渠道）。 */
+    /** 设置页统一状态，不暴露 WebSocket、轮询等 adapter 实现细节。 */
+    status: ChannelDisplayStatus;
+    /** 登录二维码 URL（设备扫码类渠道，如微信）。 */
     loginUrl?: string;
+    /** 是否支持官方扫码创建/绑定机器人。 */
+    qrProvisioning: boolean;
+    /** 官方扫码接入状态。 */
+    provisioningStatus?: string;
+    /** 本地生成的二维码 data URL。 */
+    provisioningQrDataUrl?: string;
+    /** 二维码过期时刻。 */
+    provisioningExpiresAt?: number;
+    /** 扫码流程安全化错误摘要（不包含凭据）。 */
+    provisioningError?: string;
     /** 已配置的凭据键（脱敏，仅显示哪些已填）。 */
     configuredKeys: string[];
     /** UI 批准的渠道白名单用户。 */
@@ -55,6 +74,8 @@ export declare class ChannelManager {
     private pending;
     /** 运行中的 adapter：id → { adapter }。 */
     private readonly running;
+    /** 官方扫码接入尝试：同一渠道最多一个。 */
+    private readonly provisioning;
     /** API 路由 disposer（HMR 重载/卸载时清理，避免重复注册）。 */
     private apiDisposers;
     constructor(ctx: Context, options: ManagerOptions);
@@ -102,6 +123,13 @@ export declare class ChannelManager {
         ok: boolean;
         error?: string;
     }>;
+    /** 开始官方扫码创建/绑定机器人（飞书、QQ 等）。 */
+    startProvisioning(id: string): Promise<{
+        ok: boolean;
+        error?: string;
+    }>;
+    /** 取消官方扫码接入尝试。 */
+    cancelProvisioning(id: string): Promise<void>;
     /** 渠道视图列表（UI 渲染用）。 */
     list(): ChannelView[];
     /** 注册 HTTP API（prefix 路由，由 webServer 提供）。 */

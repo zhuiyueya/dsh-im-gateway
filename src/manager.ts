@@ -9,18 +9,47 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { ChannelAdapter, ImGatewayConfig } from './core/types.js'
 import { ImGateway } from './core/gateway.js'
 import type { CronRegistry } from './core/cron.js'
+import { provisionerFor, type ProvisionerHandle } from './core/provisioning.js'
 import { CHANNEL_IDS, CHANNEL_META, createChannel, type ChannelMeta } from './channels/index.js'
+
+/** 本模块目录（ESM 无 __dirname；lib/manager.js 的 ../assets 即包根 assets）。 */
+const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
+
+/** 设置页统一展示的渠道状态；底层协议细节只保留在 adapter 日志中。 */
+export type ChannelDisplayStatus = '已连接' | '未连接' | '连接中' | '异常'
+
+const TERMINAL_PROVISIONING = new Set(['已连接', '已取消'])
+const FAILED_PROVISIONING = new Set(['扫码失败', '扫码启动失败', '连接失败', '二维码已过期'])
+
+export function normalizeChannelStatus(input: {
+  running: boolean
+  rawStatus?: string
+  loginUrl?: string
+  provisioningStatus?: string
+}): ChannelDisplayStatus {
+  const provisioning = input.provisioningStatus ?? ''
+  if (FAILED_PROVISIONING.has(provisioning)) return '异常'
+  if (provisioning && !TERMINAL_PROVISIONING.has(provisioning)) return '连接中'
+  if (!input.running) return '未连接'
+
+  const raw = input.rawStatus ?? ''
+  if (/错误|失败|异常|缺少依赖|已断开|已停止|已登出|仅支持/.test(raw)) return '异常'
+  if (input.loginUrl || /等待|登录中|连接中|重连中|鉴权中|握手|未启动/.test(raw)) return '连接中'
+  return '已连接'
+}
 
 /** 前端展示用的渠道视图。 */
 export interface ChannelView {
   id: string
   label: string
   emoji: string
-  iconDomain?: string
+  /** 本地图标文件名（assets/icons/），前端经 /dsh-im-gateway/api/icon/<id> 加载；缺省回退 emoji。 */
+  icon?: string
   docs?: string
   kind: ChannelMeta['kind']
   needs: string[]
@@ -30,10 +59,20 @@ export interface ChannelView {
   enabled: boolean
   /** 是否正在运行（adapter 已启动）。 */
   running: boolean
-  /** 运行状态文本（如"等待扫码"、"已登录"）。 */
-  status: string
-  /** 登录二维码 URL（扫码类渠道）。 */
+  /** 设置页统一状态，不暴露 WebSocket、轮询等 adapter 实现细节。 */
+  status: ChannelDisplayStatus
+  /** 登录二维码 URL（设备扫码类渠道，如微信）。 */
   loginUrl?: string
+  /** 是否支持官方扫码创建/绑定机器人。 */
+  qrProvisioning: boolean
+  /** 官方扫码接入状态。 */
+  provisioningStatus?: string
+  /** 本地生成的二维码 data URL。 */
+  provisioningQrDataUrl?: string
+  /** 二维码过期时刻。 */
+  provisioningExpiresAt?: number
+  /** 扫码流程安全化错误摘要（不包含凭据）。 */
+  provisioningError?: string
   /** 已配置的凭据键（脱敏，仅显示哪些已填）。 */
   configuredKeys: string[]
   /** UI 批准的渠道白名单用户。 */
@@ -61,6 +100,15 @@ export class ChannelManager {
   private pending: Record<string, Array<{ userId: string; username?: string; chatId?: string; time: number }>>
   /** 运行中的 adapter：id → { adapter }。 */
   private readonly running = new Map<string, ChannelAdapter>()
+  /** 官方扫码接入尝试：同一渠道最多一个。 */
+  private readonly provisioning = new Map<string, {
+    controller: AbortController
+    handle?: ProvisionerHandle
+    status: string
+    qrDataUrl?: string
+    expiresAt?: number
+    error?: string
+  }>()
   /** API 路由 disposer（HMR 重载/卸载时清理，避免重复注册）。 */
   private apiDisposers: Array<() => void> = []
 
@@ -245,6 +293,7 @@ export class ChannelManager {
 
   /** 彻底移除渠道：停止并删除持久化配置（重启后不再自动连接）。 */
   async remove(id: string): Promise<void> {
+    await this.cancelProvisioning(id)
     await this.disconnect(id)
     if (this.store[id]) {
       delete this.store[id]
@@ -263,6 +312,82 @@ export class ChannelManager {
     return this.connect(id)
   }
 
+  /** 开始官方扫码创建/绑定机器人（飞书、QQ 等）。 */
+  async startProvisioning(id: string): Promise<{ ok: boolean; error?: string }> {
+    const provisioner = provisionerFor(id)
+    if (!provisioner) return { ok: false, error: `${CHANNEL_META[id as keyof typeof CHANNEL_META]?.label ?? id} 暂不支持官方扫码接入` }
+    await this.cancelProvisioning(id)
+    const controller = new AbortController()
+    const attempt: {
+      controller: AbortController
+      handle?: ProvisionerHandle
+      status: string
+      qrDataUrl?: string
+      expiresAt?: number
+      error?: string
+    } = { controller, status: '登录中' }
+    this.provisioning.set(id, attempt)
+    try {
+      const handle = await provisioner.start({
+        onQr: (qr) => {
+          if (this.provisioning.get(id) !== attempt) return
+          attempt.qrDataUrl = qr.dataUrl
+          attempt.expiresAt = qr.expiresAt
+          attempt.status = '等待扫码'
+        },
+        onStatus: (status) => {
+          if (this.provisioning.get(id) === attempt) attempt.status = status
+        },
+        onCredentials: async (credentials) => {
+          if (this.provisioning.get(id) !== attempt) return
+          attempt.status = '保存凭据'
+          const owner = typeof credentials.ownerOpenId === 'string'
+            ? credentials.ownerOpenId
+            : typeof credentials.ownerUserOpenid === 'string' ? credentials.ownerUserOpenid : undefined
+          const config = { ...credentials }
+          delete config.ownerOpenId
+          delete config.ownerUserOpenid
+          const result = await this.connect(id, config)
+          if (result.ok) {
+            if (owner) this.approve(id, owner)
+            attempt.status = '已连接'
+            attempt.qrDataUrl = undefined
+            attempt.expiresAt = undefined
+          } else {
+            attempt.status = '连接失败'
+            attempt.error = result.error
+          }
+        },
+        onFailure: (error) => {
+          if (this.provisioning.get(id) !== attempt) return
+          const detail = error instanceof Error ? error.message : String(error)
+          this.options.log(`[manager] ${id} 扫码失败: ${detail}`)
+          attempt.status = controller.signal.aborted ? '已取消' : '扫码失败'
+          attempt.error = controller.signal.aborted ? undefined : '平台扫码服务暂时不可用或二维码已过期，请重新扫码。'
+        },
+      }, controller.signal)
+      if (this.provisioning.get(id) === attempt) attempt.handle = handle
+      return { ok: true }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      this.options.log(`[manager] ${id} 扫码启动失败: ${detail}`)
+      if (this.provisioning.get(id) === attempt) {
+        attempt.status = '扫码启动失败'
+        attempt.error = '无法启动扫码流程，请检查网络和可选依赖后重试。'
+      }
+      return { ok: false, error: '无法启动扫码流程，请检查网络和可选依赖后重试。' }
+    }
+  }
+
+  /** 取消官方扫码接入尝试。 */
+  async cancelProvisioning(id: string): Promise<void> {
+    const attempt = this.provisioning.get(id)
+    if (!attempt) return
+    this.provisioning.delete(id)
+    attempt.controller.abort()
+    await Promise.resolve(attempt.handle?.cancel()).catch(() => undefined)
+  }
+
   /** 渠道视图列表（UI 渲染用）。 */
   list(): ChannelView[] {
     const out: ChannelView[] = []
@@ -270,20 +395,33 @@ export class ChannelManager {
       const meta = CHANNEL_META[id]
       const adapter = this.running.get(id)
       const cfg = this.mergedConfig(id)
+      const provisioning = this.provisioning.get(id)
+      const rawStatus = adapter?.status?.()
+      const loginUrl = adapter?.loginUrl?.()
       out.push({
         id,
         label: meta.label,
         emoji: meta.emoji,
-        iconDomain: meta.iconDomain,
+        icon: meta.icon,
         docs: meta.docs,
         kind: meta.kind,
+        qrProvisioning: meta.qrProvisioning === true && provisionerFor(id) !== undefined,
+        provisioningStatus: provisioning?.status,
+        provisioningQrDataUrl: provisioning?.qrDataUrl,
+        provisioningExpiresAt: provisioning?.expiresAt,
+        provisioningError: provisioning?.error,
         needs: meta.needs,
         fields: meta.fields,
         hint: meta.hint,
         enabled: this.store[id]?.enabled === true || (cfg.enabled === true && !this.store[id]),
         running: adapter !== undefined,
-        status: adapter?.status?.() ?? '未连接',
-        loginUrl: adapter?.loginUrl?.(),
+        status: normalizeChannelStatus({
+          running: adapter !== undefined,
+          rawStatus,
+          loginUrl,
+          provisioningStatus: provisioning?.status,
+        }),
+        loginUrl,
         configuredKeys: Object.keys(cfg).filter((k) => k !== 'enabled' && cfg[k] !== undefined && cfg[k] !== ''),
         allowlist: this.allowlist[id] ?? [],
       })
@@ -314,6 +452,25 @@ export class ChannelManager {
       handler: async (req, res) => {
         const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
         const parts = url.pathname.split('/').filter(Boolean) // [dsh-im-gateway, api, ...]
+        // /dsh-im-gateway/api/icon/<channelId>：本地品牌图标（assets/icons/<meta.icon>），无外网依赖
+        if (parts[2] === 'icon' && parts.length === 4 && req.method === 'GET') {
+          const channelId = parts[3]
+          const icon = CHANNEL_META[channelId as keyof typeof CHANNEL_META]?.icon
+          if (!icon) {
+            send(res, 404, { ok: false, error: `no icon for ${channelId}` })
+            return
+          }
+          try {
+            const buf = readFileSync(join(MODULE_DIR, '../assets/icons', icon))
+            const ext = icon.includes('.') ? icon.slice(icon.lastIndexOf('.')) : '.svg'
+            const contentType = ext === '.png' ? 'image/png' : ext === '.ico' ? 'image/x-icon' : 'image/svg+xml'
+            res.writeHead(200, { 'content-type': `${contentType}; charset=utf-8`, 'cache-control': 'public, max-age=86400' })
+            res.end(buf)
+          } catch {
+            send(res, 404, { ok: false, error: `icon file missing: ${icon}` })
+          }
+          return
+        }
         // /dsh-im-gateway/api/channels
         if (parts[2] === 'channels' && parts.length === 3 && req.method === 'GET') {
           send(res, 200, { ok: true, channels: this.list(), pending: this.pendingRequests() })
@@ -353,6 +510,16 @@ export class ChannelManager {
           if (action === 'connect') {
             const result = await this.connect(id, body.config as Record<string, unknown> | undefined)
             send(res, result.ok ? 200 : 400, result.ok ? { ok: true, channel: this.list().find((c) => c.id === id) } : { ok: false, error: result.error })
+            return
+          }
+          if (action === 'provision') {
+            const result = await this.startProvisioning(id)
+            send(res, result.ok ? 200 : 400, result.ok ? { ok: true, channel: this.list().find((c) => c.id === id) } : { ok: false, error: result.error })
+            return
+          }
+          if (action === 'cancel-provision') {
+            await this.cancelProvisioning(id)
+            send(res, 200, { ok: true, channel: this.list().find((c) => c.id === id) })
             return
           }
           if (action === 'disconnect') {

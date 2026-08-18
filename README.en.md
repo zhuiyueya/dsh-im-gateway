@@ -8,13 +8,27 @@
   <img alt="npm downloads" src="https://img.shields.io/npm/dm/dsh-im-gateway?color=4d6bfe">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-4d6bfe">
   <img alt="Platform" src="https://img.shields.io/badge/platform-DeepSeek%20Harness-4d6bfe">
-  <img alt="Channels" src="https://img.shields.io/badge/channels-24%2B-238636">
+  <img alt="Channels" src="https://img.shields.io/badge/channels-25%2B-238636">
   <img alt="DSH bundle" src="https://img.shields.io/badge/dsh-bundle%20plugin-4d6bfe">
   <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-70%20passed-238636">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-105%20passed-238636">
 </p>
 
 <p align="center"><b>English</b> · <a href="README.md">简体中文</a></p>
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/im-gateway-settings.png" width="92%" alt="dsh IM Gateway settings">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/wechat-chat.jpg" width="30%" alt="WeChat chat screenshot">
+  <img src="docs/screenshots/qq-chat.jpg" width="30%" alt="QQ chat screenshot">
+  <img src="docs/screenshots/feishu-chat.jpg" width="30%" alt="Feishu chat screenshot">
+</p>
 
 ---
 
@@ -92,7 +106,7 @@ Messages starting with `/` in any connected chat are commands:
 
 ## ✨ Highlights
 
-- 🌐 **23+ channels covered** — aligned with OpenClaw's channel surface: WeChat, Feishu, Telegram, Discord, Slack, QQ, WhatsApp, Signal, Teams, LINE, Matrix, Mattermost, IRC, Twitch, Nostr, Zalo, iMessage…
+- 🌐 **25+ channels covered** — aligned with OpenClaw's channel surface: WeChat, Feishu, Telegram, Discord, Slack, QQ, WhatsApp, Signal, Teams, LINE, Matrix, Mattermost, IRC, Twitch, Nostr, Zalo, iMessage…
 - 🔁 **One agent session per chat** — chatting in a group drives the agent, replies stream back in real time; `/new` starts a fresh session, `/bind` attaches an existing one
 - ✅ **Remote approval bridge** — when the agent requests a tool approval it's pushed to the chat; reply 「approve / reject」 right there, and it falls back to the local approval system on timeout
 - ❓ **Interactive Question Bridge** — `ask_user_question` prompts and options fan out to every bound channel; answer from Web or any IM, and the first valid answer resumes the same agent
@@ -100,7 +114,7 @@ Messages starting with `/` in any connected chat are commands:
 - 📱 **Mobile multi-part input merge** — `..` means "more coming", `!!` submits immediately, bare text merges within a 5s window, auto-recovers after a crash
 - ✂️ **Smart splitting of long replies** — chunks by each channel's limit, breaks at newlines/periods first, numbered `(i/n)` and convergent
 - 🛡️ **Allowlist-safe by default** — unknown users are rejected by default; approval replies are strictly checked against session ownership
-- 🔑 **QR login + scanless restore** — WeChat / WhatsApp QR login links are persisted to disk; login state (bot_token + poll cursor) is saved, so **connections auto-restore after restart without rescanning**
+- 🔑 **Six QR access flows** — WeChat / WhatsApp link a device; Feishu / QQ / DingTalk / WeCom use official scan-to-create-bot flows, automatically save credentials, and still offer manual setup
 - 🖼️ **Media in and out** — WeChat fully supports images/voice (server-side transcription)/files/video (CDN AES-128-ECB encrypted); agents can send workspace files into chats via the `im_send_file` tool
 - 📦 **One-command install + visual setup** — a standard `dsh.bundle` plugin; connect channels from the Web GUI settings panel by scanning or pasting credentials, no restart needed
 - 🎯 **Beginner friendly** — WeChat/WhatsApp pop a QR code with one click; other channels use guided forms with live status
@@ -117,14 +131,6 @@ When the agent calls `ask_user_question`, the structured prompt shown in the Web
 | Multiple questions | One line per question: `question-number: answer` | `1: 2`, then `2: 1,3` on the next line |
 
 The IM answer window is controlled by `questionTimeoutSecs` (600 seconds by default). When it expires, only the IM wait is removed—the question remains answerable in the Web GUI. Pending questions are isolated by session, and concurrent channel replies can resume the agent only once.
-
-## 📸 Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/wechat-chat.jpg" width="30%" alt="WeChat chat screenshot">
-  <img src="docs/screenshots/qq-chat.jpg" width="30%" alt="QQ chat screenshot">
-  <img src="docs/screenshots/feishu-chat.jpg" width="30%" alt="Feishu chat screenshot">
-</p>
 
 ## 🏗 Architecture
 
@@ -158,9 +164,11 @@ tool approval → approval/request → pushed to chat → 「approve」→ allow
 | **Telegram** | ✅ Full | Bot API long-polling | @BotFather token |
 | **Discord** | ✅ Full | Gateway WebSocket | Bot token |
 | **Slack** | ✅ Full | Socket Mode | xoxb- + xapp- token |
-| **Feishu / Lark** | ✅ Full | Official SDK long-connection | App ID + Secret |
+| **Feishu / Lark** | ✅ Full | Official SDK long-connection | Official QR or App ID + Secret |
+| **DingTalk** | ✅ Full | Official Stream connection | Official QR or Client ID + Secret |
+| **WeCom** | ✅ Full | Official intelligent-bot WebSocket | Official QR or Bot ID + Secret |
 | **WeChat** | ✅ Full* | iLink QR login (official protocol) | Dedicated account ⚠️ |
-| **QQ Bot** | ✅ Full | Official WebSocket | AppID + Secret |
+| **QQ Bot** | ✅ Full | Official WebSocket | Official QR or AppID + Secret |
 | **LINE** | ✅ Full | REST + webhook | Channel token |
 | **Matrix** | ✅ Full | Client sync | Homeserver + token |
 | **Mattermost** | ✅ Full | WebSocket + REST | Server URL + token |
@@ -199,10 +207,11 @@ dsh web    # restart dsh (required once after installing a plugin)
 
 Open the dsh Web GUI (default http://localhost:3080) → **Settings ⚙️ → 「🐋 IM Gateway」**:
 
-- **WeChat / WhatsApp**: click 「Connect (scan)」→ a **QR code** pops up right on the page, scan with your phone and confirm ✅
-- **Feishu / Telegram / QQ Bot / Discord / Slack …**: click 「Enter credentials」→ paste the token as prompted → 「Save & Connect」✅
+- **WeChat / WhatsApp**: click 「Connect (scan)」→ link the device with the corresponding mobile app ✅
+- **Feishu / QQ / DingTalk / WeCom**: click 「Scan to connect bot」→ scan with the platform app; the bot is created and connected automatically, or use manual credentials ✅
+- **Telegram / Discord / Slack and others**: these platforms have no official QR bot-creation flow; use the guided token or manifest setup ✅
 
-No restart needed after connecting; status updates live (waiting for scan / connected / error). **All configured channels auto-reconnect after a dsh restart** (WeChat login state is persisted, no rescanning).
+No restart needed after connecting; status updates live (waiting for scan / connected / error). **All configured channels auto-reconnect after a dsh restart** (WeChat login state is persisted, no rescanning). See [`docs/qr-login-matrix.md`](docs/qr-login-matrix.md) for the platform-by-platform QR capability research.
 
 > 🔧 **Disconnect vs Delete config**: connected channel cards have two buttons — 「Disconnect」 just pauses it temporarily (auto-restored on restart); 「Delete config」 removes the credentials (won't reconnect until reconfigured).
 
@@ -252,8 +261,10 @@ All config goes under the `im-gateway` entry in the profile's `cordis.patch.yml`
 | telegram | `token` | `DSH_TELEGRAM_TOKEN` |
 | discord | `token` | `DSH_DISCORD_TOKEN` |
 | slack | `token` + `appToken` | `DSH_SLACK_TOKEN` / `DSH_SLACK_APP_TOKEN` |
-| feishu | `appId` + `appSecret` | `DSH_FEISHU_APP_ID` / `DSH_FEISHU_APP_SECRET` |
-| qqbot | `appId` + `appSecret` | `DSH_QQ_APP_ID` / `DSH_QQ_APP_SECRET` |
+| feishu | `appId` + `appSecret` (or settings QR) | `DSH_FEISHU_APP_ID` / `DSH_FEISHU_APP_SECRET` |
+| dingtalk | `clientId` + `clientSecret` (or settings QR) | `DSH_DINGTALK_CLIENT_ID` / `DSH_DINGTALK_CLIENT_SECRET` |
+| wecom | `botId` + `secret` (or settings QR) | `DSH_WECOM_BOT_ID` / `DSH_WECOM_SECRET` |
+| qqbot | `appId` + `appSecret` (or settings QR) | `DSH_QQ_APP_ID` / `DSH_QQ_APP_SECRET` |
 | signal | `cli` + `phone` | `DSH_SIGNAL_CLI` / `DSH_SIGNAL_PHONE` |
 | line | `channelToken` + `channelSecret` | `DSH_LINE_TOKEN` / `DSH_LINE_SECRET` |
 | matrix | `homeserver` + `accessToken` | `DSH_MATRIX_HOMESERVER` / `DSH_MATRIX_ACCESS_TOKEN` |
@@ -273,7 +284,7 @@ All config goes under the `im-gateway` entry in the profile's `cordis.patch.yml`
 ```bash
 npm install
 npm run build          # tsc builds to lib/
-npm test               # node --test (70 cases: split/merge/approval/questions/gateway/channel protocols)
+npm test               # node --test (105 cases: split/merge/approval/questions/gateway/QR channel protocols)
 ```
 
 **Adding a new channel takes 4 steps**:

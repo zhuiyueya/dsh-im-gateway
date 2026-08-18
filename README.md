@@ -8,13 +8,27 @@
   <img alt="npm downloads" src="https://img.shields.io/npm/dm/dsh-im-gateway?color=4d6bfe">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-4d6bfe">
   <img alt="Platform" src="https://img.shields.io/badge/platform-DeepSeek%20Harness-4d6bfe">
-  <img alt="Channels" src="https://img.shields.io/badge/channels-24%2B-238636">
+  <img alt="Channels" src="https://img.shields.io/badge/channels-25%2B-238636">
   <img alt="DSH bundle" src="https://img.shields.io/badge/dsh-bundle%20plugin-4d6bfe">
   <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-70%20passed-238636">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-105%20passed-238636">
 </p>
 
 <p align="center"><a href="README.en.md">English</a> · <b>简体中文</b></p>
+
+---
+
+## 📸 效果预览
+
+<p align="center">
+  <img src="docs/screenshots/im-gateway-settings.png" width="92%" alt="dsh IM 网关设置界面">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/wechat-chat.jpg" width="30%" alt="微信聊天截图">
+  <img src="docs/screenshots/qq-chat.jpg" width="30%" alt="QQ 聊天截图">
+  <img src="docs/screenshots/feishu-chat.jpg" width="30%" alt="飞书聊天截图">
+</p>
 
 ---
 
@@ -63,7 +77,7 @@
 ```
 </details>
 
-装好后：**打开 dsh Web GUI → 设置 ⚙️ → 🐋 IM 网关 → 点选渠道连接**（微信/WhatsApp 扫码即连，其余填凭据即可）。
+装好后：**打开 dsh Web GUI → 设置 ⚙️ → 🐋 IM 网关 → 点选渠道连接**（微信/WhatsApp 是设备扫码；飞书/QQ/钉钉/企业微信支持官方扫码创建机器人，其余填凭据即可）。
 
 ---
 
@@ -92,7 +106,7 @@
 
 ## ✨ Highlights
 
-- 🌐 **23+ 渠道全覆盖** — 对齐 OpenClaw 的渠道面：微信、飞书、Telegram、Discord、Slack、QQ、WhatsApp、Signal、Teams、LINE、Matrix、Mattermost、IRC、Twitch、Nostr、Zalo、iMessage……
+- 🌐 **25+ 渠道全覆盖** — 对齐 OpenClaw 的渠道面：微信、飞书、Telegram、Discord、Slack、QQ、WhatsApp、Signal、Teams、LINE、Matrix、Mattermost、IRC、Twitch、Nostr、Zalo、iMessage……
 - 🔁 **每聊天一个 agent 会话** — 群里聊天 = 驱动 agent，回复实时回推；`/new` 换新会话，`/bind` 绑定现有会话
 - ✅ **远程审批桥** — agent 请求工具批准时推送到 IM，聊天里回一句「批准 / 拒绝」即可，超时自动转回本机批准体系
 - ❓ **交互式提问桥** — `ask_user_question` 的问题和选项同步到所有绑定渠道；Web 或任一 IM 均可回答，第一答生效并恢复同一个 agent
@@ -100,10 +114,10 @@
 - 📱 **手机多段输入合并** — `..` 表示还有后续，`!!` 立即提交，裸文本 5 秒合并窗口，崩溃后自动恢复
 - ✂️ **长回复智能分片** — 按各渠道上限切分，优先在换行/句号断行，带 `（i/n）` 序号且收敛
 - 🛡️ **白名单安全默认** — 默认拒绝一切未知用户；审批应答强制校验会话归属
-- 🔑 **扫码登录 + 免扫码恢复** — 微信 / WhatsApp 扫码登录链接自动落盘；登录态（bot_token + 轮询游标）持久化，**重启自动恢复连接，无需重复扫码**
+- 🔑 **六类扫码接入** — 微信 / WhatsApp 扫码关联设备；飞书 / QQ / 钉钉 / 企业微信走平台官方扫码创建机器人，自动保存凭据并连接；仍保留手动凭据入口
 - 🖼️ **媒体收发** — 微信渠道完整支持图片/语音（服务端转文字）/文件/视频（CDN AES-128-ECB 加密），agent 可用 `im_send_file` 工具把工作区文件发给聊天
 - 📦 **一条命令安装 + 可视化连接** — 标准 `dsh.bundle` 插件；Web GUI 设置面板点选渠道、扫码/填凭据即连，无需重启
-- 🎯 **小白友好** — 微信/WhatsApp 点一下直接弹二维码；其余渠道表单引导，状态实时显示
+- 🎯 **小白友好** — 微信/WhatsApp/飞书/QQ/钉钉/企业微信都可从设置页扫码，其他渠道提供凭据表单，状态实时显示
 
 ### ❓ 如何回答交互式提问
 
@@ -142,14 +156,6 @@ IM 回答窗口由 `questionTimeoutSecs` 控制（默认 600 秒）。窗口超�
 - 错过策略：`cronCatchUp` 默认 `false`（网关停机期间错过的提醒不补发，直接跳下次）；设为 `true` 则恢复后补发最近一次；
 - 工具按当前聊天隔离：`im_cron_list` / `im_cron_rm` 只能读写本聊天创建的任务，防止越权。
 
-## 📸 效果预览
-
-<p align="center">
-  <img src="docs/screenshots/wechat-chat.jpg" width="30%" alt="微信聊天截图">
-  <img src="docs/screenshots/qq-chat.jpg" width="30%" alt="QQ 聊天截图">
-  <img src="docs/screenshots/feishu-chat.jpg" width="30%" alt="飞书聊天截图">
-</p>
-
 ## 🏗 架构
 
 ```
@@ -181,9 +187,11 @@ agent 回复 ← 网关(按渠道分片) ← session/event(assistant/message) �
 | **Telegram** | ✅ 完整 | Bot API 长轮询 | @BotFather token |
 | **Discord** | ✅ 完整 | Gateway WebSocket | Bot token |
 | **Slack** | ✅ 完整 | Socket Mode | xoxb- + xapp- token |
-| **飞书 / Lark** | ✅ 完整 | 官方 SDK 长连接 | App ID + Secret |
+| **飞书 / Lark** | ✅ 完整 | 官方 SDK 长连接 | 官方扫码或 App ID + Secret |
+| **钉钉** | ✅ 完整 | 官方 Stream 长连接 | 官方扫码或 Client ID + Secret |
+| **企业微信** | ✅ 完整 | 官方智能机器人 WebSocket | 官方扫码或 Bot ID + Secret |
 | **微信** | ✅ 完整* | iLink 扫码登录（官方协议） | 专用小号 ⚠️ |
-| **QQ 机器人** | ✅ 完整 | 官方 WebSocket | AppID + Secret |
+| **QQ 机器人** | ✅ 完整 | 官方 WebSocket | 官方扫码或 AppID + Secret |
 | **LINE** | ✅ 完整 | REST + webhook | Channel token |
 | **Matrix** | ✅ 完整 | 客户端同步 | Homeserver + token |
 | **Mattermost** | ✅ 完整 | WebSocket + REST | Server URL + token |
@@ -222,10 +230,11 @@ dsh web    # 重启 dsh（安装插件后需要重启一次）
 
 打开 dsh Web GUI（默认 http://localhost:3080）→ **设置 ⚙️ → 「🐋 IM 网关」**：
 
-- **微信 / WhatsApp**：点「连接（扫码）」→ 页面直接弹出**二维码**，手机扫码确认即连 ✅
-- **飞书 / Telegram / QQ 机器人 / Discord / Slack …**：点「填写凭据」→ 按提示粘贴 token → 「保存并连接」✅
+- **微信 / WhatsApp**：点「连接（扫码）」→ 用手机关联设备 ✅
+- **飞书 / QQ / 钉钉 / 企业微信**：点「扫码接入机器人」→ 使用对应平台 App 扫码确认，自动创建机器人并连接；也可点「手动填写凭据」✅
+- **Telegram / Discord / Slack 等**：这些平台没有官方扫码创建机器人流程，按引导填写 Token 或 Manifest ✅
 
-连接后无需重启，状态实时显示（等待扫码 / 已连接 / 异常）。**重启 dsh 后所有已配置渠道自动重连**（微信登录态已持久化，无需重复扫码）。
+连接后无需重启，状态实时显示（等待扫码 / 已连接 / 异常）。**重启 dsh 后所有已配置渠道自动重连**（微信登录态已持久化，无需重复扫码）。各平台为什么支持/不支持扫码，见 [`docs/qr-login-matrix.md`](docs/qr-login-matrix.md)。
 
 > 🔧 **断开 vs 删除配置**：已连接渠道卡片上有两个按钮——「断开」只是临时停用（重启自动恢复）；「删除配置」会移除凭据（重启不再连接，需重新配置）。
 
@@ -275,8 +284,10 @@ agent 回复实时回推；需要批准时在聊天里回「批准 / 拒绝」�
 | telegram | `token` | `DSH_TELEGRAM_TOKEN` |
 | discord | `token` | `DSH_DISCORD_TOKEN` |
 | slack | `token` + `appToken` | `DSH_SLACK_TOKEN` / `DSH_SLACK_APP_TOKEN` |
-| feishu | `appId` + `appSecret` | `DSH_FEISHU_APP_ID` / `DSH_FEISHU_APP_SECRET` |
-| qqbot | `appId` + `appSecret` | `DSH_QQ_APP_ID` / `DSH_QQ_APP_SECRET` |
+| feishu | `appId` + `appSecret`（或设置页扫码） | `DSH_FEISHU_APP_ID` / `DSH_FEISHU_APP_SECRET` |
+| dingtalk | `clientId` + `clientSecret`（或设置页扫码） | `DSH_DINGTALK_CLIENT_ID` / `DSH_DINGTALK_CLIENT_SECRET` |
+| wecom | `botId` + `secret`（或设置页扫码） | `DSH_WECOM_BOT_ID` / `DSH_WECOM_SECRET` |
+| qqbot | `appId` + `appSecret`（或设置页扫码） | `DSH_QQ_APP_ID` / `DSH_QQ_APP_SECRET` |
 | signal | `cli` + `phone` | `DSH_SIGNAL_CLI` / `DSH_SIGNAL_PHONE` |
 | line | `channelToken` + `channelSecret` | `DSH_LINE_TOKEN` / `DSH_LINE_SECRET` |
 | matrix | `homeserver` + `accessToken` | `DSH_MATRIX_HOMESERVER` / `DSH_MATRIX_ACCESS_TOKEN` |
@@ -296,7 +307,7 @@ agent 回复实时回推；需要批准时在聊天里回「批准 / 拒绝」�
 ```bash
 npm install
 npm run build          # tsc 构建到 lib/
-npm test               # node --test（70 个用例：分片/合并/审批/交互提问/网关/渠道协议）
+npm test               # node --test（105 个用例：分片/合并/审批/交互提问/网关/扫码渠道协议）
 ```
 
 **新增一个渠道只需 4 步**：

@@ -1,7 +1,7 @@
 {
   "name": "dsh-im-gateway",
-  "version": "0.2.1",
-  "description": "聚合 IM 网关插件（DeepSeek Harness）：把 dsh agent 接入 Telegram / Discord / Slack / 飞书 / 微信 / QQ / WhatsApp / Signal / Teams / LINE / Matrix / Mattermost / Google Chat / IRC / Twitch / Nostr / Nextcloud Talk / Synology Chat / Zalo / iMessage 等 20+ 渠道，统一会话路由、审批桥、白名单与引导式配置。",
+  "version": "0.3.0",
+  "description": "聚合 IM 网关插件（DeepSeek Harness）：把 dsh agent 接入微信、飞书、钉钉、企业微信、QQ、Telegram、Discord、Slack、WhatsApp 等 25+ 渠道，统一会话路由、审批桥、交互提问、定时提醒、白名单与扫码接入。",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -21,10 +21,13 @@
     "cordis.patch.yml",
     "README.md",
     "README.en.md",
-    "docs"
+    "THIRD_PARTY_NOTICES.md",
+    "docs",
+    "assets"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && cp client.js lib/client.js",
+    "prepublishOnly": "npm run typecheck && npm test",
     "prepack": "npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test tests/*.test.mjs"
@@ -43,10 +46,15 @@
     "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-user-approval": "^0.1.0-rc.6",
     "@deepseek-ai/dsh-user-questions": "^0.1.0-rc.6",
-    "@deepseek-ai/schemastery": "^3.18.1"
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "qrcode": "^1.5.4"
   },
   "optionalDependencies": {
-    "@whiskeysockets/baileys": "^6.7.18"
+    "@larksuiteoapi/node-sdk": "^1.73.0",
+    "@tencent-connect/qqbot-connector": "^1.2.0",
+    "@wecom/aibot-node-sdk": "^1.0.7",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "dingtalk-stream": "^2.1.4"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1"
@@ -55,6 +63,7 @@
     "@larksuiteoapi/node-sdk": "^1.36.0",
     "@noble/curves": "^1.6.0",
     "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.6",
     "typescript": "^5.9.2"
   },
   "dsh": {
