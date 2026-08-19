@@ -11,7 +11,7 @@
   <img alt="Channels" src="https://img.shields.io/badge/channels-25%2B-238636">
   <img alt="DSH bundle" src="https://img.shields.io/badge/dsh-bundle%20plugin-4d6bfe">
   <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-105%20passed-238636">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-106%20passed-238636">
 </p>
 
 <p align="center"><a href="README.en.md">English</a> · <b>简体中文</b></p>
@@ -237,7 +237,7 @@ agent 回复 ← 网关(按渠道分片) ← session/event(assistant/message) �
 ```bash
 npm install
 npm run build          # tsc 构建到 lib/
-npm test               # node --test（105 个用例）
+npm test               # node --test（106 个用例）
 ```
 
 **新增一个渠道只需 4 步**：
@@ -266,7 +266,7 @@ export function createYourChannel(config, log): ChannelAdapter | undefined {
 ## 🤝 贡献
 
 - 修 bug、补渠道、完善文档都欢迎！
-- 请先 `npm test` 保证 105 个用例全绿
+- 请先 `npm test` 保证 106 个用例全绿
 - 给仓库加 `dsh-plugin` 和 `deepseek-harness` topic 可以进 awesome 插件列表
 
 ## 📄 许可证

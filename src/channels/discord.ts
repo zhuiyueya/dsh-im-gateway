@@ -28,7 +28,7 @@ interface GatewayPayload {
 interface DispatchMessage {
   id: string
   channel_id: string
-  author: { id: string; username: string }
+  author: { id: string; username: string; bot?: boolean }
   content?: string
   guild_id?: string
 }
@@ -45,6 +45,7 @@ export function createDiscordChannel(config: DiscordChannelConfig, log: (line: s
   let heartbeat: ReturnType<typeof setInterval> | undefined
   let stopped = false
   let seq: number | null = null
+  let botUserId: string | undefined
   let statusText = '未连接'
 
   async function rest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -95,9 +96,13 @@ export function createDiscordChannel(config: DiscordChannelConfig, log: (line: s
         case 0: {
           const t = payload.t
           const d = payload.d as Record<string, unknown>
-          if (t === 'MESSAGE_CREATE') {
+          if (t === 'READY') {
+            const user = d.user as { id?: string } | undefined
+            botUserId = user?.id
+          } else if (t === 'MESSAGE_CREATE') {
             const m = d as unknown as DispatchMessage
-            if (m.content && !m.author.id.startsWith('_')) {
+            const authoredByBot = m.author.bot === true || m.author.id === botUserId
+            if (m.content && !authoredByBot) {
               const isDM = (d as { channel_type?: number }).channel_type === 1
               void handler?.({
                 chatId: m.channel_id,

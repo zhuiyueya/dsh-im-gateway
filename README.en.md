@@ -11,7 +11,7 @@
   <img alt="Channels" src="https://img.shields.io/badge/channels-25%2B-238636">
   <img alt="DSH bundle" src="https://img.shields.io/badge/dsh-bundle%20plugin-4d6bfe">
   <img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-105%20passed-238636">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-106%20passed-238636">
 </p>
 
 <p align="center"><b>English</b> · <a href="README.md">简体中文</a></p>
@@ -238,7 +238,7 @@ tool approval → approval/request → pushed to chat → 「approve」→ allow
 ```bash
 npm install
 npm run build          # tsc builds to lib/
-npm test               # node --test (105 cases)
+npm test               # node --test (106 cases)
 ```
 
 **Adding a new channel takes 4 steps**:
@@ -267,7 +267,7 @@ export function createYourChannel(config, log): ChannelAdapter | undefined {
 ## 🤝 Contributing
 
 - Bug fixes, new channels and doc improvements are all welcome!
-- Please make sure `npm test` passes all 105 cases first
+- Please make sure `npm test` passes all 106 cases first
 - Add the `dsh-plugin` and `deepseek-harness` topics to the repo to get into the awesome-plugin list
 
 ## 📄 License
