@@ -40,8 +40,9 @@ import { acquireDshHomeInstanceLock } from './instance-lock.js'
 export const name = 'dsh-im-gateway'
 // agents：创建/查找 agent 会话；jobs：后台任务（扫码/轮询状态对 Web UI 可见）；
 // tools：注册 im_send_file（agent → IM 发文件）；attachments：图片入站转 image block；
-// webServer：提供设置面板调用的 HTTP API；agentPresets：创建/继续 agent 时挂入 preset
-export const inject = ['agents', 'jobs', 'tools', 'attachments', 'webServer', 'sessionQuery', 'agentPresets', 'userQuestions']
+// webServer：提供设置面板调用的 HTTP API；agentPresets：创建/继续 agent 时挂入 preset；
+// workspaceRegistry：把 IM 新会话挂入 Web 端对应工作区分组
+export const inject = ['agents', 'jobs', 'tools', 'attachments', 'webServer', 'sessionQuery', 'agentPresets', 'userQuestions', 'workspaceRegistry']
 
 /** 网关部署配置。 */
 export const Config: Schema<ImGatewayConfig> = Schema.object({

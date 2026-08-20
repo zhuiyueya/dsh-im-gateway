@@ -1,6 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ImGateway } from '../lib/core/gateway.js'
+import { inject as pluginInject } from '../lib/index.js'
+
+test('插件声明 workspaceRegistry 注入', () => {
+  assert.ok(pluginInject.includes('workspaceRegistry'))
+})
 
 /** 极简 mock ctx：只实现 gateway 用到的表面。 */
 function makeCtx() {
