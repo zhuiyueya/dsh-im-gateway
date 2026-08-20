@@ -707,7 +707,7 @@ export class ImGateway {
           return '已解绑。用 /bind <session-id> 绑定新会话。'
         }
         const entry = await this.router.rotate(channelId, chatId)
-        return entry ? `已开启全新会话：${entry.sessionId}（工作区 ${entry.workspace ?? this.config.cwd}）` : '尚未有会话。'
+        return `已开启全新会话：${entry.sessionId}（工作区 ${entry.workspace ?? this.config.cwd}）`
       }
       case '/workspaces': {
         return await this.listWorkspaces()

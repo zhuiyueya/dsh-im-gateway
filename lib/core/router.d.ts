@@ -85,8 +85,8 @@ export declare class SessionRouter {
         error?: string;
         workspace?: string;
     }>;
-    /** `/new`：轮换新会话。 */
-    rotate(channelId: string, chatId: string): Promise<ChatEntry | undefined>;
+    /** `/new`：解绑旧条目并始终创建新会话。 */
+    rotate(channelId: string, chatId: string): Promise<ChatEntry>;
     /** bound 模式：把 chat 绑定到本进程的 live agent 会话。 */
     bind(channelId: string, chatId: string, sessionId: string, userId?: string): {
         ok: boolean;

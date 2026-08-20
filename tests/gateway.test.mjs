@@ -137,6 +137,24 @@ test('命令 /status 不创建会话', async () => {
   gw.dispose()
 })
 
+test('重启后无内存会话时 /new 仍立即创建新会话', async () => {
+  const ctx = makeCtx()
+  const gw = new ImGateway(ctx, { config: baseConfig, stateDir: '/tmp', log: () => {} })
+  const { channel, sent } = makeChannel()
+  gw.register(channel)
+
+  await channel.handler({ chatId: 'c1', userId: 'u1', text: '/new' })
+  const created = sent.find((s) => s.text.includes('已开启全新会话'))
+  assert.ok(created, '/new 应立即创建并返回新会话')
+  const sessionId = created.text.match(/im:test:c1:\d+/)?.[0]
+  assert.ok(sessionId, '回复应包含新会话 id')
+
+  await channel.handler({ chatId: 'c1', userId: 'u1', text: '/status' })
+  assert.ok(sent.some((s) => s.text.includes(`绑定会话：${sessionId}`)), '/status 应显示新绑定会话')
+
+  gw.dispose()
+})
+
 test('白名单拦截非授权用户', async () => {
   const ctx = makeCtx()
   const cfg = { ...baseConfig, allowAllUsers: false, allowedUserIds: { test: ['u1'] } }

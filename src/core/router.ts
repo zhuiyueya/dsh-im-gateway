@@ -221,16 +221,15 @@ export class SessionRouter {
     return { ok: true, workspace: sessionCwdOf(liveAgent) }
   }
 
-  /** `/new`：轮换新会话。 */
-  async rotate(channelId: string, chatId: string): Promise<ChatEntry | undefined> {
+  /** `/new`：解绑旧条目并始终创建新会话。 */
+  async rotate(channelId: string, chatId: string): Promise<ChatEntry> {
     const key = `${channelId}:${chatId}`
     const old = this.entries.get(key)
-    if (old?.handle) {
+    if (old) {
       this.unindex(old)
       this.entries.delete(key)
-      await old.handle.dispose().catch(() => undefined)
+      if (old.handle) await old.handle.dispose().catch(() => undefined)
     }
-    if (!old) return undefined
     return this.create(channelId, chatId)
   }
 
