@@ -144,7 +144,13 @@ export class SessionRouter {
 
   /** 把新会话登记到宿主 Workspace Registry，确保 Web 侧按目录分组。 */
   private async attachToWorkspace(cwd: string, sessionId: SessionId): Promise<void> {
-    const registry = (this.ctx as Context & { workspaceRegistry?: WorkspaceRegistryLike }).workspaceRegistry
+    let registry: WorkspaceRegistryLike | undefined
+    try {
+      registry = (this.ctx as Context & { workspaceRegistry?: WorkspaceRegistryLike }).workspaceRegistry
+    } catch {
+      // Older hosts do not inject the optional workspace registry.
+      return
+    }
     if (!registry) return
     try {
       const workspace = await registry.resolveByPath(cwd) ?? await registry.create(cwd)

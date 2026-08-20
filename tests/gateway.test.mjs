@@ -155,6 +155,24 @@ test('重启后无内存会话时 /new 仍立即创建新会话', async () => {
   gw.dispose()
 })
 
+test('未注入 workspaceRegistry 时 /new 仍正常工作', async () => {
+  const ctx = makeCtx()
+  Object.defineProperty(ctx, 'workspaceRegistry', {
+    configurable: true,
+    get() {
+      throw new Error('cannot get property "workspaceRegistry" without inject')
+    },
+  })
+  const gw = new ImGateway(ctx, { config: baseConfig, stateDir: '/tmp', log: () => {} })
+  const { channel, sent } = makeChannel()
+  gw.register(channel)
+
+  await channel.handler({ chatId: 'c1', userId: 'u1', text: '/new' })
+  assert.ok(sent.some((s) => s.text.includes('已开启全新会话')), '未注入 workspaceRegistry 也应回复 /new')
+
+  gw.dispose()
+})
+
 test('白名单拦截非授权用户', async () => {
   const ctx = makeCtx()
   const cfg = { ...baseConfig, allowAllUsers: false, allowedUserIds: { test: ['u1'] } }
