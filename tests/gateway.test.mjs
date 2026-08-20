@@ -385,6 +385,32 @@ test('/workspace 切换工作区：后续新会话使用新 cwd', async () => {
   rmSync('/tmp/imgw-ws', { recursive: true, force: true })
 })
 
+test('新会话登记到宿主 workspace，Web 端不进入未分组', async () => {
+  const ctx = makeCtx()
+  const attached = []
+  let created = false
+  ctx.workspaceRegistry = {
+    resolveByPath: async (path) => {
+      assert.equal(path, baseConfig.cwd)
+      return { attachSession: async (sessionId) => { attached.push(String(sessionId)) } }
+    },
+    create: async () => {
+      created = true
+      return { attachSession: async () => {} }
+    },
+  }
+  const gw = new ImGateway(ctx, { config: baseConfig, stateDir: '/tmp', log: () => {} })
+  const { channel } = makeChannel()
+  gw.register(channel)
+
+  await channel.handler({ chatId: 'c1', userId: 'u1', text: 'hello!!' })
+  const sessionId = [...ctx._agents.keys()][0]
+  assert.deepEqual(attached, [sessionId], '新会话应挂到已有 workspace')
+  assert.equal(created, false, '已有 workspace 时不应重复创建')
+
+  gw.dispose()
+})
+
 test('/workspace 不存在的目录报错', async () => {
   const ctx = makeCtx()
   const gw = new ImGateway(ctx, { config: baseConfig, stateDir: '/tmp', log: () => {} })

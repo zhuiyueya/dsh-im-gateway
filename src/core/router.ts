@@ -12,6 +12,11 @@ import { SessionId } from '@deepseek-ai/dsh-session'
 // dsh-agent-presets 模块增强（ctx.agentPresets：把 agent 挂入 preset，否则无核心工具）
 import type {} from '@deepseek-ai/dsh-agent-presets'
 
+interface WorkspaceRegistryLike {
+  resolveByPath(path: string): Promise<{ attachSession(sessionId: SessionId): Promise<void> } | undefined>
+  create(path: string): Promise<{ attachSession(sessionId: SessionId): Promise<void> }>
+}
+
 /** 一个 chat 的会话条目。 */
 export interface ChatEntry {
   readonly channelId: string
@@ -42,6 +47,8 @@ export interface RouterOptions {
     load(): Record<string, string>
     save(sessions: Record<string, string>): void
   }
+  /** Workspace Registry 兼容失败日志。 */
+  log?: (line: string) => void
 }
 
 export class SessionRouter {
@@ -127,6 +134,7 @@ export class SessionRouter {
       agentOptions: { provider: this.options.provider, model: this.options.model },
       setup: this.presetSetup(this.options.agentPreset),
     })
+    await this.attachToWorkspace(cwd, sessionId)
     const entry: ChatEntry = { channelId, chatId, key, sessionId: String(sessionId), handle, workspace: cwd }
     this.entries.set(key, entry)
     this.index(entry)
@@ -134,8 +142,19 @@ export class SessionRouter {
     return entry
   }
 
-  /**
-   * Agent setup：把 agent scope 挂入 preset（否则工具/prompt/skills 只有全局层，
+  /** 把新会话登记到宿主 Workspace Registry，确保 Web 侧按目录分组。 */
+  private async attachToWorkspace(cwd: string, sessionId: SessionId): Promise<void> {
+    const registry = (this.ctx as Context & { workspaceRegistry?: WorkspaceRegistryLike }).workspaceRegistry
+    if (!registry) return
+    try {
+      const workspace = await registry.resolveByPath(cwd) ?? await registry.create(cwd)
+      await workspace.attachSession(sessionId)
+    } catch (err) {
+      this.options.log?.(`[gateway] 会话 ${sessionId} 挂载工作区失败: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  /** Agent setup：把 agent scope 挂入 preset（否则工具/prompt/skills 只有全局层，
    * 缺失 bash/fs/web 等核心工具）。
    */
   private presetSetup(presetId: string): AgentSetup {

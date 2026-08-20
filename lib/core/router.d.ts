@@ -36,6 +36,8 @@ export interface RouterOptions {
         load(): Record<string, string>;
         save(sessions: Record<string, string>): void;
     };
+    /** Workspace Registry 兼容失败日志。 */
+    log?: (line: string) => void;
 }
 export declare class SessionRouter {
     private readonly ctx;
@@ -66,8 +68,9 @@ export declare class SessionRouter {
     lastSessionOf(channelId: string, chatId: string): string | undefined;
     /** 创建新会话（per-chat；cwd 优先 chat 工作区偏好）。 */
     create(channelId: string, chatId: string): Promise<ChatEntry>;
-    /**
-     * Agent setup：把 agent scope 挂入 preset（否则工具/prompt/skills 只有全局层，
+    /** 把新会话登记到宿主 Workspace Registry，确保 Web 侧按目录分组。 */
+    private attachToWorkspace;
+    /** Agent setup：把 agent scope 挂入 preset（否则工具/prompt/skills 只有全局层，
      * 缺失 bash/fs/web 等核心工具）。
      */
     private presetSetup;
