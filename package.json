@@ -1,6 +1,6 @@
 {
   "name": "dsh-im-gateway",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "聚合 IM 网关插件（DeepSeek Harness）：把 dsh agent 接入微信、飞书、钉钉、企业微信、QQ、Telegram、Discord、Slack、WhatsApp 等 25+ 渠道，统一会话路由、审批桥、交互提问、定时提醒、白名单与扫码接入。",
   "type": "module",
   "main": "lib/index.js",
